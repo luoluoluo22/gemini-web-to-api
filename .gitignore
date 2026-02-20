@@ -1,0 +1,12 @@
+# File; .gitignore
+
+.vscode
+.python-version
+__pycache__
+.idea
+config.conf
+generated_media
+har_and_cookies
+.venv
+.env
+*.log
