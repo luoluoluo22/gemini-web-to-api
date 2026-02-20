@@ -1,5 +1,6 @@
 # src/app/main.py
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -51,6 +52,13 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown complete.")
 
 app = FastAPI(lifespan=lifespan)
+
+# Mount static files
+import os
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 app.add_middleware(
     CORSMiddleware,

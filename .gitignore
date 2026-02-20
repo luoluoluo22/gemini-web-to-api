@@ -10,3 +10,7 @@ har_and_cookies
 .venv
 .env
 *.log
+src/app/static/images/
+banana_proxy.png
+inspect_gemini_webapi.py
+demo_banana_image.py

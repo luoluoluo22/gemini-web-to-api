@@ -5,8 +5,8 @@ import os
 import tempfile
 import mimetypes
 import httpx
-from urllib.parse import urlparse
-from fastapi import APIRouter, HTTPException
+from urllib.parse import urlparse, quote
+from fastapi import APIRouter, HTTPException, Request, Response
 from app.logger import logger
 from schemas.request import GeminiRequest, OpenAIChatRequest
 from app.services.gemini_client import get_gemini_client, GeminiClientNotInitializedError
@@ -114,7 +114,7 @@ async def process_media_url(media_url: str) -> str:
     raise HTTPException(status_code=400, detail="Failed to process media")
 
 @router.post("/v1/chat/completions")
-async def chat_completions(request: OpenAIChatRequest):
+async def chat_completions(request: OpenAIChatRequest, raw_request: Request):
     try:
         gemini_client = get_gemini_client()
     except GeminiClientNotInitializedError as e:
@@ -204,8 +204,28 @@ async def chat_completions(request: OpenAIChatRequest):
                 # Append images to response text if available
                 response_text = response.text
                 if hasattr(response, "images") and response.images:
+                    base_url = str(raw_request.base_url).rstrip("/")
+                    
+                    # Define save directory: src/app/static/images
+                    static_images_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "images")
+                    if not os.path.exists(static_images_dir):
+                        os.makedirs(static_images_dir)
+
                     for img in response.images:
-                        response_text += f"\n\n![{img.alt}]({img.url})"
+                        try:
+                            # Save image using gemini_webapi's built-in method
+                            # It handles cookies automatically for GeneratedImage
+                            saved_path = await img.save(path=static_images_dir, skip_invalid_filename=True)
+                            
+                            if saved_path:
+                                filename = os.path.basename(saved_path)
+                                # Construct URL pointing to static file
+                                image_url = f"{base_url}/static/images/{filename}"
+                                response_text += f"\n\n![{img.alt}]({image_url})"
+                            else:
+                                logger.warning(f"Failed to save image: {img.url}")
+                        except Exception as e:
+                            logger.error(f"Error saving image: {e}")
 
                 return convert_to_openai_format(response_text, request.model.value, is_stream)
             except Exception as e:
