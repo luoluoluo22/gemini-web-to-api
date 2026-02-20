@@ -60,6 +60,7 @@ async def process_media_url(media_url: str) -> str:
     Download or decode media (image/video) and save to a temporary file.
     Returns the path to the temporary file.
     """
+    logger.info(f"Processing media URL: {media_url[:50]}...")
     content = None
     ext = ""
 
@@ -106,8 +107,10 @@ async def process_media_url(media_url: str) -> str:
     if content:
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
             tmp.write(content)
+            logger.info(f"Saved media to temporary file: {tmp.name}")
             return tmp.name
     
+    logger.error("Failed to process media: No content retrieved")
     raise HTTPException(status_code=400, detail="Failed to process media")
 
 @router.post("/v1/chat/completions")
@@ -184,13 +187,27 @@ async def chat_completions(request: OpenAIChatRequest):
 
         if request.model:
             try:
+                # Map 'banana' model to a real model (e.g., gemini-3.0-flash)
+                model_name = request.model.value
+                if model_name == "banana":
+                    model_name = "gemini-3.0-flash"
+                    logger.info(f"Mapped model 'banana' to '{model_name}'")
+
                 # Pass the list of temporary file paths to gemini_client
+                logger.info(f"Generating content with model: {model_name}, prompt length: {len(final_prompt)}, files: {len(files_to_upload) if files_to_upload else 0}")
                 response = await gemini_client.generate_content(
                     message=final_prompt, 
-                    model=request.model.value, 
+                    model=model_name, 
                     files=files_to_upload if files_to_upload else None
                 )
-                return convert_to_openai_format(response.text, request.model.value, is_stream)
+
+                # Append images to response text if available
+                response_text = response.text
+                if hasattr(response, "images") and response.images:
+                    for img in response.images:
+                        response_text += f"\n\n![{img.alt}]({img.url})"
+
+                return convert_to_openai_format(response_text, request.model.value, is_stream)
             except Exception as e:
                 logger.error(f"Error in /v1/chat/completions endpoint: {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail=f"Error processing chat completion: {str(e)}")

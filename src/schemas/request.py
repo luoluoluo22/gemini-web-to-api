@@ -24,6 +24,9 @@ class GeminiModels(str, Enum):
     PRO_2_5 = "gemini-2.5-pro"
     FLASH_2_5 = "gemini-2.5-flash"
 
+    # Custom/Test Models
+    BANANA = "banana"
+
 
 class GeminiRequest(BaseModel):
     message: str

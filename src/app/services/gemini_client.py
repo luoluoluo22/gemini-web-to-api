@@ -27,8 +27,9 @@ async def init_gemini_client() -> bool:
 
     if CONFIG.getboolean("EnabledAI", "gemini", fallback=True):
         try:
-            gemini_cookie_1PSID = CONFIG["Cookies"].get("gemini_cookie_1PSID")
-            gemini_cookie_1PSIDTS = CONFIG["Cookies"].get("gemini_cookie_1PSIDTS")
+            # Try both lowercase and original case just to be safe
+            gemini_cookie_1PSID = CONFIG["Cookies"].get("gemini_cookie_1psid") or CONFIG["Cookies"].get("gemini_cookie_1PSID")
+            gemini_cookie_1PSIDTS = CONFIG["Cookies"].get("gemini_cookie_1psidts") or CONFIG["Cookies"].get("gemini_cookie_1PSIDTS")
             gemini_proxy = CONFIG["Proxy"].get("http_proxy")
 
             if not gemini_cookie_1PSID or not gemini_cookie_1PSIDTS:
